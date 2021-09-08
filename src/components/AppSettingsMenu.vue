@@ -175,6 +175,7 @@ export default {
 			}
 		},
 		registerProtocolHandler() {
+			console.debug('MAILTO IS WORKING')
 			if (window.navigator.registerProtocolHandler) {
 				const url
 					= window.location.protocol + '//' + window.location.host + generateUrl('apps/mail/compose?uri=%s')
