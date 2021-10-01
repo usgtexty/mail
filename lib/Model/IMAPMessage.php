@@ -393,7 +393,10 @@ class IMAPMessage implements IMessage, JsonSerializable {
 	 */
 	private function getPart(Horde_Mime_Part $p, $partNo): void {
 		// Regular attachments
-		if ($p->isAttachment() || $p->getType() === 'message/rfc822') {
+		$isAttachment = ($p->isAttachment() || $p->getType() === 'message/rfc822') &&
+			!in_array($p->getType(), ['application/pgp-signature', 'application/pkcs7-signature', 'application/x-pkcs7-signature']);
+
+		if ($isAttachment) {
 			$this->attachments[] = [
 				'id' => $p->getMimeId(),
 				'messageId' => $this->messageId,
