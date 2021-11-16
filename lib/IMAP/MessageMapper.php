@@ -115,6 +115,7 @@ class MessageMapper {
 
 		if ($total === 0) {
 			// Nothing to fetch for this mailbox
+			$this->logger->debug("Mailbox $mailbox is empty");
 			return [
 				'messages' => [],
 				'all' => true,
@@ -179,6 +180,11 @@ class MessageMapper {
 
 		$highestUidFetched = $uidsToFetch[count($uidsToFetch) - 1];
 		$this->logger->debug(sprintf("Range for findAll min=$min max=$max found %d messages, %d left after filtering. Highest UID fetched is %d", count($uidCandidates), count($uidsToFetch), $highestUidFetched));
+		if ($highestUidFetched === $max) {
+			$this->logger->debug("All messages of mailbox $mailbox have been fetched");
+		} else {
+			$this->logger->debug("Mailbox $mailbox has more messages to fetch");
+		}
 		return [
 			'messages' => $this->findByIds(
 				$client,
