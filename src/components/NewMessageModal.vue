@@ -193,7 +193,7 @@ export default {
 	min-height: 60%;
 }
 ::v-deep .modal-wrapper .modal-container {
-	overflow-y: auto;
-	overflow-x: auto;
+	overflow-y: auto !important;
+	overflow-x: auto !important;
 }
 </style>
