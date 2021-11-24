@@ -223,7 +223,7 @@
 		role="alert"
 		class="sending-hint" />
 	<Loading v-else-if="state === STATES.DISCARDING" :hint="t('mail', 'Discarding …')" class="emptycontent" />
-	<div v-else-if="state === STATES.DISCARDED" class="emptycontent">
+	<div v-else-if="state === STATES.DISCARDED" class="emptycontent icon-mail">
 		<h2>{{ t('mail', 'Draft was discarded!') }}</h2>
 	</div>
 	<div v-else-if="state === STATES.ERROR" class="emptycontent" role="alert">
@@ -250,11 +250,8 @@
 			{{ t('mail', 'Send anyway') }}
 		</button>
 	</div>
-	<div v-else class="emptycontent">
+	<div v-else class="emptycontent icon-mail">
 		<h2>{{ t('mail', 'Message sent!') }}</h2>
-		<button v-if="!isReply" class="button primary" @click="reset">
-			{{ t('mail', 'Write another message') }}
-		</button>
 	</div>
 </template>
 
@@ -861,6 +858,7 @@ export default {
 
 	&.mail-account {
 		border-top: none;
+		padding-top: 10px;
 
 		& > .multiselect {
 			max-width: none;
@@ -968,7 +966,10 @@ export default {
 	border: none;
 }
 .emptycontent {
-	margin-top: 70px;
+	margin-top: 250px;
 	height: 120px;
+}
+h2 {
+padding-top: 105px;
 }
 </style>
