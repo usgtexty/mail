@@ -223,9 +223,9 @@
 		role="alert"
 		class="sending-hint" />
 	<Loading v-else-if="state === STATES.DISCARDING" :hint="t('mail', 'Discarding …')" class="emptycontent" />
-	<div v-else-if="state === STATES.DISCARDED" class="emptycontent icon-mail">
+	<EmptyContent v-else-if="state === STATES.DISCARDED" icon="icon-mail">
 		<h2>{{ t('mail', 'Draft was discarded!') }}</h2>
-	</div>
+	</EmptyContent>
 	<div v-else-if="state === STATES.ERROR" class="emptycontent" role="alert">
 		<h2>{{ t('mail', 'Error sending your message') }}</h2>
 		<p v-if="errorText">
@@ -250,9 +250,9 @@
 			{{ t('mail', 'Send anyway') }}
 		</button>
 	</div>
-	<div v-else class="emptycontent icon-mail">
+	<EmptyContent v-else icon="icon-checkmark">
 		<h2>{{ t('mail', 'Message sent!') }}</h2>
-	</div>
+	</EmptyContent>
 </template>
 
 <script>
@@ -266,6 +266,7 @@ import Actions from '@nextcloud/vue/dist/Components/Actions'
 import ActionButton from '@nextcloud/vue/dist/Components/ActionButton'
 import ActionCheckbox from '@nextcloud/vue/dist/Components/ActionCheckbox'
 import ActionLink from '@nextcloud/vue/dist/Components/ActionLink'
+import EmptyContent from '@nextcloud/vue/dist/Components/EmptyContent'
 import Multiselect from '@nextcloud/vue/dist/Components/Multiselect'
 import { showError } from '@nextcloud/dialogs'
 import { translate as t } from '@nextcloud/l10n'
@@ -318,6 +319,7 @@ export default {
 		Loading,
 		Multiselect,
 		TextEditor,
+		EmptyContent,
 	},
 	props: {
 		fromAccount: {
@@ -968,8 +970,5 @@ export default {
 .emptycontent {
 	margin-top: 250px;
 	height: 120px;
-}
-h2 {
-padding-top: 105px;
 }
 </style>
