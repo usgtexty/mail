@@ -171,6 +171,8 @@ class PageController extends Controller {
 
 		$csp = new ContentSecurityPolicy();
 		$csp->addAllowedFrameDomain('\'self\'');
+		$csp->addAllowedImageDomain('*');
+		$csp->addAllowedMediaDomain('*');
 		$response->setContentSecurityPolicy($csp);
 
 		return $response;

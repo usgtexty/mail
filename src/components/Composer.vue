@@ -125,16 +125,9 @@
 				:focus="isReply"
 				:bus="bus"
 				@input="onInputChanged" />
-			<TextEditor
+			<TinyMCE
 				v-else-if="!encrypt && !editorPlainText"
-				key="editor-rich"
 				v-model="bodyVal"
-				:html="true"
-				name="body"
-				class="message-body"
-				:placeholder="t('mail', 'Write message …')"
-				:focus="isReply"
-				:bus="bus"
 				@input="onInputChanged" />
 			<MailvelopeEditor
 				v-else
@@ -267,6 +260,7 @@ import { detect, html, plain, toHtml, toPlain } from '../util/text'
 import Loading from './Loading'
 import logger from '../logger'
 import TextEditor from './TextEditor'
+import TinyMCE from './TinyMCE'
 import { buildReplyBody } from '../ReplyBuilder'
 import MailvelopeEditor from './MailvelopeEditor'
 import { getMailvelope } from '../crypto/mailvelope'
@@ -306,6 +300,7 @@ export default {
 		Loading,
 		Multiselect,
 		TextEditor,
+		TinyMCE,
 	},
 	props: {
 		fromAccount: {
@@ -389,6 +384,8 @@ export default {
 			addShareLink: t('mail', 'Add share link from {productName} Files', { productName: OC?.theme?.name ?? 'Nextcloud' }),
 			requestMdn: false,
 			appendSignature: true,
+			signatured: false,
+			aliasChanged: false,
 		}
 	},
 	computed: {
@@ -464,6 +461,8 @@ export default {
 			this.checkRecipientsKeys()
 		},
 		aliases(newAliases) {
+			this.aliasChanged = true
+
 			console.debug('aliases changed')
 			if (this.selectedAlias === NO_ALIAS_SET) {
 				return
@@ -586,7 +585,7 @@ export default {
 			} else {
 				body = this.bodyVal
 			}
-			this.bodyVal = html(body).value
+			this.bodyVal = this.prepareBody(html(body).value)
 		},
 		recipientToRfc822(recipient) {
 			if (recipient.email === recipient.label) {
@@ -667,11 +666,25 @@ export default {
 				})
 			return this.draftsPromise
 		},
+		prepareBody(body) {
+			const signatureValue = toHtml(detect(this.selectedAlias.signature)).value
+			const sign = '<!-- START_SIGNATURE --> -- \n\n\n' + signatureValue + '<!-- END_SIGNATURE -->'
+			if (this.selectedAlias.signatureAboveQuote && body !== '<p></p><p></p>') {
+				return sign + body
+			} else {
+				return body + sign
+			}
+		},
 		onInputChanged() {
 			this.saveDraftDebounced(this.getMessageData)
 			if (this.appendSignature) {
-				const signatureValue = toHtml(detect(this.selectedAlias.signature)).value
-				this.bus.$emit('insertSignature', signatureValue, this.selectedAlias.signatureAboveQuote)
+				if (!this.signatured) {
+					this.bodyVal = 	this.prepareBody(this.bodyVal)
+					this.signatured = true
+				}
+
+				// const signatureValue = toHtml(detect(this.selectedAlias.signature)).value
+				// this.bus.$emit('insertSignature', signatureValue, this.selectedAlias.signatureAboveQuote)
 				this.appendSignature = false
 			}
 		},

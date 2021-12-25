@@ -40,11 +40,9 @@
 			label="label"
 			track-by="id"
 			@select="changeIdentity" />
-		<TextEditor
-			v-model="signature"
-			:html="true"
-			:placeholder="t('mail', 'Signature …')"
-			:bus="bus" />
+		<div class="signature-editor">
+			<TinyMCE v-model="signature" />
+		</div>
 		<button
 			class="primary"
 			:class="loading ? 'icon-loading-small-dark' : 'icon-checkmark-white'"
@@ -60,7 +58,7 @@
 
 <script>
 import logger from '../logger'
-import TextEditor from './TextEditor'
+import TinyMCE from './TinyMCE'
 import { detect, toHtml } from '../util/text'
 import Vue from 'vue'
 import Multiselect from '@nextcloud/vue/dist/Components/Multiselect'
@@ -68,7 +66,7 @@ import Multiselect from '@nextcloud/vue/dist/Components/Multiselect'
 export default {
 	name: 'SignatureSettings',
 	components: {
-		TextEditor,
+		TinyMCE,
 		Multiselect,
 	},
 	props: {
@@ -166,6 +164,11 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+.signature-editor {
+	border: 1px solid #dddddd;
+	height: 175px;
+	overflow: scroll;
+}
 .ck.ck-editor__editable_inline {
   width: 100%;
   max-width: 78vw;
