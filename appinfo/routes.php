@@ -30,6 +30,11 @@ return [
 			'verb' => 'GET'
 		],
 		[
+			'name' => 'oauth#oauth',
+			'url' => '/oauth',
+			'verb' => 'GET'
+		],
+		[
 			'name' => 'page#setup',
 			'url' => '/setup',
 			'verb' => 'GET'
@@ -298,7 +303,12 @@ return [
 			'name' => 'thread#move',
 			'url' => '/api/thread/{id}',
 			'verb' => 'POST'
-		]
+		],
+		[
+			'name' => 'accounts#oAuthConnect',
+			'url' => '/api/oauth/{provider}',
+			'verb' => 'POST'
+		],
 	],
 	'resources' => [
 		'accounts' => ['url' => '/api/accounts'],

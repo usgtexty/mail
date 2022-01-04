@@ -91,6 +91,16 @@ use OCP\AppFramework\Db\Entity;
  * @method void setSievePassword(?string $sievePassword)
  * @method bool|null isSignatureAboveQuote()
  * @method void setSignatureAboveQuote(bool $signatureAboveQuote)
+ * @method string|null getOauthProvider()
+ * @method void setOauthProvider(string $oauthProvider)
+ * @method string|null getOauthAccessToken()
+ * @method void setOauthAccessToken(string $oauthAccessToken)
+ * @method string|null getOauthRefreshToken()
+ * @method void setOauthRefreshToken(string $oauthRefreshToken)
+ * @method string|null getOauthIdToken()
+ * @method void setOauthIdToken(string $oauthIdToken)
+ * @method string|null getOauthExpireIn()
+ * @method void setOauthExpireIn(string $oauthExpireIn)
  */
 class MailAccount extends Entity {
 	protected $userId;
@@ -112,6 +122,12 @@ class MailAccount extends Entity {
 	protected $order;
 	protected $showSubscribedOnly;
 	protected $personalNamespace;
+
+	protected $oauthProvider;
+	protected $oauthAccessToken;
+	protected $oauthRefreshToken;
+	protected $oauthIdToken;
+	protected $oauthExpireIn;
 
 	/** @var int|null */
 	protected $draftsMailboxId;
@@ -193,6 +209,26 @@ class MailAccount extends Entity {
 			$this->setSignatureAboveQuote($params['signatureAboveQuote']);
 		}
 
+		if (isset($params['oauthProvider'])) {
+			$this->setOauthProvider($params['oauthProvider']);
+		}
+
+		if (isset($params['oauthAccessToken'])) {
+			$this->setOauthAccessToken($params['oauthAccessToken']);
+		}
+
+		if (isset($params['oauthRefreshToken'])) {
+			$this->setOauthRefreshToken($params['oauthRefreshToken']);
+		}
+
+		if (isset($params['oauthIdToken'])) {
+			$this->setOauthIdToken($params['oauthIdToken']);
+		}
+
+		if (isset($params['oauthExpireIn'])) {
+			$this->setOauthExpireIn($params['oauthExpireIn']);
+		}
+
 		$this->addType('inboundPort', 'integer');
 		$this->addType('outboundPort', 'integer');
 		$this->addType('lastMailboxSync', 'integer');
@@ -232,6 +268,7 @@ class MailAccount extends Entity {
 			'trashMailboxId' => $this->getTrashMailboxId(),
 			'sieveEnabled' => ($this->isSieveEnabled() === true),
 			'signatureAboveQuote' => ($this->isSignatureAboveQuote() === true),
+			'oauthProvider' => $this->getOauthProvider(),
 		];
 
 		if (!is_null($this->getOutboundHost())) {

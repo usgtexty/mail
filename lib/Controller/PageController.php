@@ -178,6 +178,22 @@ class PageController extends Controller {
 		return $response;
 	}
 
+	public function oauth(): TemplateResponse {
+		$msMail = 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize';
+		$params = http_build_query([
+			'client_id' => $this->config->getSystemValue('mail.oauth.clientid', ''),
+			'response_type' => 'code',
+			'redirect_uri' => $this->urlGenerator->linkToRouteAbsolute('mail.page.oauth'),
+			'scope' => 'profile openid offline_access https://outlook.office.com/IMAP.AccessAsUser.All https://outlook.office.com/SMTP.Send',
+			'state' => '',
+			'response_mode' => 'query',
+		]);
+		return new TemplateResponse($this->appName, 'oauth', [
+			'microsoft' => "$msMail?$params",
+			'google' => null,
+		]);
+	}
+
 	/**
 	 * @NoAdminRequired
 	 * @NoCSRFRequired

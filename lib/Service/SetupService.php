@@ -116,12 +116,19 @@ class SetupService {
 	 * @param string $smtpPassword
 	 * @param string $uid
 	 * @param int|null $accountId
-	 *
-	 * @throws ServiceException
+	 * @param string|null $oauthProvider
+	 * @param string|null $oauthAccessToken
+	 * @param string|null $oauthRefreshToken
+	 * @param string|null $oauthIdToken
+	 * @param string|null $oauthExpireIn
 	 *
 	 * @return Account|null
 	 */
-	public function createNewAccount($accountName, $emailAddress, $imapHost, $imapPort, $imapSslMode, $imapUser, $imapPassword, $smtpHost, $smtpPort, $smtpSslMode, $smtpUser, $smtpPassword, $uid, ?int $accountId = null): ?Account {
+	public function createNewAccount(
+		$accountName, $emailAddress, $imapHost, $imapPort, $imapSslMode, $imapUser, $imapPassword,
+		$smtpHost, $smtpPort, $smtpSslMode, $smtpUser, $smtpPassword, $uid, ?int $accountId = null,
+		$oauthProvider = null, $oauthAccessToken = null, $oauthRefreshToken = null, $oauthIdToken = null, $oauthExpireIn = null
+	): ?Account {
 		$this->logger->info('Setting up manually configured account');
 		$newAccount = new MailAccount([
 			'accountId' => $accountId,
@@ -136,11 +143,19 @@ class SetupService {
 			'smtpPort' => $smtpPort,
 			'smtpSslMode' => $smtpSslMode,
 			'smtpUser' => $smtpUser,
-			'smtpPassword' => $smtpPassword
+			'smtpPassword' => $smtpPassword,
+			'oauthProvider' => $oauthProvider,
+			'oauthAccessToken' => $oauthAccessToken,
+			'oauthRefreshToken' => $oauthRefreshToken,
+			'oauthIdToken' => $oauthIdToken,
+			'oauthExpireIn' => $oauthExpireIn,
 		]);
 		$newAccount->setUserId($uid);
 		$newAccount->setInboundPassword($this->crypto->encrypt($imapPassword));
 		$newAccount->setOutboundPassword($this->crypto->encrypt($smtpPassword));
+		$newAccount->setOauthAccessToken($this->crypto->encrypt($oauthAccessToken));
+		$newAccount->setOauthRefreshToken($this->crypto->encrypt($oauthRefreshToken));
+		$newAccount->setOauthIdToken($this->crypto->encrypt($oauthIdToken));
 
 		$account = new Account($newAccount);
 		$this->logger->debug('Connecting to account {account}', ['account' => $newAccount->getEmail()]);

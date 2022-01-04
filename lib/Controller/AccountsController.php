@@ -48,6 +48,7 @@ use OCA\Mail\Service\Sync\SyncService;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\JSONResponse;
+use OCA\Mail\Support\OAuthHandler;
 use OCP\IL10N;
 use OCP\IRequest;
 use Psr\Log\LoggerInterface;
@@ -84,6 +85,9 @@ class AccountsController extends Controller {
 	/** @var SyncService */
 	private $syncService;
 
+	/** @var OAuthHandler */
+	private $oAuthHandler;
+
 	/**
 	 * AccountsController constructor.
 	 *
@@ -99,6 +103,7 @@ class AccountsController extends Controller {
 	 * @param SetupService $setup
 	 * @param IMailManager $mailManager
 	 * @param SyncService $syncService
+	 * @param OAuthHandler $oAuthHandler
 	 */
 	public function __construct(string $appName,
 								   IRequest $request,
@@ -111,7 +116,8 @@ class AccountsController extends Controller {
 								   IMailTransmission $mailTransmission,
 								   SetupService $setup,
 								   IMailManager $mailManager,
-								   SyncService $syncService
+								   SyncService $syncService,
+								   OAuthHandler $oAuthHandler
 	) {
 		parent::__construct($appName, $request);
 		$this->accountService = $accountService;
@@ -124,6 +130,7 @@ class AccountsController extends Controller {
 		$this->setup = $setup;
 		$this->mailManager = $mailManager;
 		$this->syncService = $syncService;
+		$this->oAuthHandler = $oAuthHandler;
 	}
 
 	/**
@@ -514,5 +521,37 @@ class AccountsController extends Controller {
 			return MailJsonResponse::fail([], Http::STATUS_NOT_IMPLEMENTED);
 		}
 		return MailJsonResponse::success($quota);
+	}
+
+	/**
+	 * @NoAdminRequired
+	 * @TrapError
+	 *
+	 * @param string $provider
+	 *
+	 * @return JSONResponse
+	 */
+	public function oAuthConnect(string $provider): JSONResponse {
+		$account = null;
+		$errorMessage = null;
+		try {
+			$data 	= $this->oAuthHandler->authorize($provider);
+			$account = $this->setup->createNewAccount(
+				$data['name'], $data['email'], $data['imap_host'], $data['imap_port'],
+				$data['imap_ssl_mode'], $data['email'],'XOAUTH2',
+				$data['smtp_host'], $data['smtp_port'], $data['smtp_ssl_mode'], $data['email'], 'XOAUTH2', $this->currentUserId,
+				null,
+				$provider, $data['access_token'], $data['refresh_token'], $data['id_token'], $data['expires_in']
+			);
+		} catch (Exception $ex) {
+			$errorMessage = $ex->getMessage();
+		}
+
+		if (is_null($account)) {
+			$this->logger->error('Creating account failed: ' . $errorMessage);
+			throw new ClientException($this->l10n->t('Creating account failed: ') . $errorMessage);
+		}
+
+		return new JSONResponse($account, Http::STATUS_CREATED);
 	}
 }
