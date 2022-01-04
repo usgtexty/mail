@@ -30,7 +30,7 @@ return [
 			'verb' => 'GET'
 		],
 		[
-			'name' => 'oauth#oauth',
+			'name' => 'page#oauth',
 			'url' => '/oauth',
 			'verb' => 'GET'
 		],
