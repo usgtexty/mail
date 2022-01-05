@@ -4,12 +4,9 @@ declare(strict_types=1);
 
 namespace OCA\Mail\Support;
 
+use OC;
 use OCA\Mail\Db\MailAccount;
-use OCA\Mail\Db\MailAccountMapper;
-use OCP\Http\Client\IClient;
-use OCP\Http\Client\IClientService;
-use OCP\IConfig;
-use OCP\IRequest;
+use OCA\Mail\Service\AccountService;
 
 class OAuthHandler {
 
@@ -25,42 +22,31 @@ class OAuthHandler {
 	/** @var IConfig */
 	private $config;
 
-	/** @var IClientService */
-	private $clientService;
-
 	/** @var IClient */
 	private $client;
 
-	/** @var MailAccountMapper */
-	private $mapper;
+	/** @var AccountService */
+	private $accountService;
 
 	/**
 	 * OAuth Manager constructor
 	 *
 	 * @param MailAccount $account
 	 */
-	public function __construct(
-		IRequest $request,
-		IConfig $config,
-		ICrypto $crypto,
-		IClientService $clientService,
-		MailAccountMapper $mapper
-	) {
-		$this->request = $request;
-		$this->crypto = $crypto;
-		$this->config = $config;
-		$this->clientService = $clientService;
-		$this->client = $clientService->newClient();
-		$this->mapper = $mapper;
+	public function __construct() {
+		$this->crypto = OC::$server->getCrypto();
+		$this->config = OC::$server->getConfig();
+		$this->request = OC::$server->getRequest();
+		$this->client = OC::$server->getHTTPClientService()->newClient();
 	}
 
 	public function authorize(string $provider) {
 		$method = $provider . 'Authorize';
-		if (!method_exists($this, $method)) {
+		if (!method_exists(static::class, $method)) {
 			throw new \Exception('Unsupported Provider!');
 		}
 
-		return $this->$method();
+		return static::$method();
 	}
 
 	private function microsoftAuthorize(): array {
@@ -120,41 +106,70 @@ class OAuthHandler {
 		];
 	}
 
-	public function refresh(MailAccount $account) {
+	public function getToken(MailAccount $account, AccountService $accountService) {
 		$this->account = $account;
+		$this->accountService = $accountService;
+
+		$token = $account->getOauthAccessToken();
+		$token = $this->crypto->decrypt($token);
+		$expire = (int) $this->account->getOauthExpireIn();
+
+		if ($expire > time()) {
+			return $token;
+		}
 		
 		$method = $account->getOauthProvider() . 'Refresh';
 		if (!method_exists($this, $method)) {
 			throw new \Exception('Unsupported Provider!');
 		}
 
-		return $this->$method();
+		$res = $this->$method();
+		if ($res['status'] !== 'success') {
+			return $token;
+		}
+
+		$this->account->setOauthAccessToken($this->crypto->encrypt($res['access_token']));
+		$this->account->setOauthRefreshToken($this->crypto->encrypt($res['refresh_token']));
+		$this->account->setOauthIdToken($this->crypto->encrypt($res['id_token']));
+		$this->account->setOauthExpireIn($res['expire_in']);
+		$this->accountService->save($this->account);
+
+		return $res['access_token'];
 	}
 
 	private function microsoftRefresh() {
 		$clientId =  $this->config->getSystemValue('ms_azure_client_id');
 		$clientSecret =  $this->config->getSystemValue('ms_azure_client_secret');
+		$refreshToken = $this->account->getOauthRefreshToken();
+		$refreshToken = $this->crypto->decrypt($refreshToken);
 
-		$request = $this->client->post('https://login.microsoftonline.com/common/oauth2/v2.0/token', [
-			'body' => [
-				'client_id' => $clientId,
-				'client_secret' => $clientSecret,
-				'redirect_uri' => 'http://localhost:8090/auth.php', // TODO: Change this
-				'grant_type' => 'refresh_token',
-				'refresh_token' => $this->request->getParam('code'),
-			]
-		]);
+		try {
+			$request = $this->client->post('https://login.microsoftonline.com/common/oauth2/v2.0/token', [
+				'body' => [
+					'client_id' => $clientId,
+					'client_secret' => $clientSecret,
+					'redirect_uri' => 'http://localhost:8090/auth.php', // TODO: Change this
+					'grant_type' => 'refresh_token',
+					'refresh_token' => $refreshToken,
+				]
+			]);
 
-		$body = json_decode($request->getBody(), true);
+			$body = json_decode($request->getBody(), true);
 
-		return [
-			'access_token' => null,
-			'refresh_token' => null,
-			'id_token' => null,
-			'expire_in' => time(),
-		];
-
-		return $body['access_token'] ?? null;
+			return [
+				'status' => 'success',
+				'message' => 'Token has been fetched.',
+				'access_token' => $body['access_token'],
+				'refresh_token' => $body['refresh_token'],
+				'id_token' => $body['id_token'],
+				'expire_in' => time() + $body['expires_in'],
+			];
+		} catch (\Exception $e) {
+			return [
+				'status' => 'error',
+				'message' => $e->getMessage()
+			];
+		}
 	}
 
 	public function googleRefresh() {

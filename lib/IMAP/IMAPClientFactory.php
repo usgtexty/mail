@@ -26,6 +26,7 @@ namespace OCA\Mail\IMAP;
 use Horde_Imap_Client_Socket;
 use OCA\Mail\Account;
 use OCA\Mail\Cache\Cache;
+use OCA\Mail\Service\AccountService;
 use OCA\Mail\Support\OAuthHandler;
 use OCP\ICacheFactory;
 use OCP\IConfig;
@@ -42,6 +43,9 @@ class IMAPClientFactory {
 	/** @var ICacheFactory */
 	private $cacheFactory;
 
+	/** @var AccountService */
+	private $accountService;
+
 	/** @var OAuthHandler */
 	private $oAuthHandler;
 
@@ -52,11 +56,12 @@ class IMAPClientFactory {
 	 * @param IConfig $config
 	 * @param ICacheFactory $cacheFactory
 	 */
-	public function __construct(ICrypto $crypto, IConfig $config, ICacheFactory $cacheFactory, OAuthHandler $oAuthHandler) {
+	public function __construct(ICrypto $crypto, IConfig $config, ICacheFactory $cacheFactory, AccountService $accountService) {
 		$this->crypto = $crypto;
 		$this->config = $config;
 		$this->cacheFactory = $cacheFactory;
-		$this->oAuthHandler = $oAuthHandler;
+		$this->accountService = $accountService;
+		$this->oAuthHandler = new OAuthHandler();
 	}
 
 	/**
@@ -72,7 +77,7 @@ class IMAPClientFactory {
 			$token = $account->getMailAccount()->getOauthAccessToken();
 			$token = $this->crypto->decrypt($token);
 			if ($password === 'XOAUTH2') {
-				$token = $this->oAuthHandler->refresh($account->getMailAccount());
+				$token = $this->oAuthHandler->getToken($account->getMailAccount(), $this->accountService);
 			}
 			$port = $account->getMailAccount()->getInboundPort();
 			$sslMode = $account->getMailAccount()->getInboundSslMode();

@@ -30,6 +30,7 @@ use Horde_Mail_Transport;
 use Horde_Mail_Transport_Mail;
 use Horde_Mail_Transport_Smtphorde;
 use OCA\Mail\Account;
+use OCA\Mail\Service\AccountService;
 use OCA\Mail\Support\HostNameFactory;
 use OCA\Mail\Support\OAuthHandler;
 use OCP\IConfig;
@@ -46,17 +47,21 @@ class SmtpClientFactory {
 	/** @var HostNameFactory */
 	private $hostNameFactory;
 
+	/** @var AccountService */
+	private $accountService;
+
 	/** @var OAuthHandler */
 	private $oAuthHandler;
 
 	public function __construct(IConfig $config,
 								ICrypto $crypto,
 								HostNameFactory $hostNameFactory,
-								OAuthHandler $oAuthHandler) {
+							    AccountService $accountService) {
 		$this->config = $config;
 		$this->crypto = $crypto;
 		$this->hostNameFactory = $hostNameFactory;
-		$this->oAuthHandler = $oAuthHandler;
+		$this->accountService = $accountService;
+		$this->oAuthHandler = new OAuthHandler();
 	}
 
 	/**
@@ -74,10 +79,9 @@ class SmtpClientFactory {
 		$user = $mailAccount->getOutboundUser();
 		$password = $mailAccount->getOutboundPassword();
 		$password = $this->crypto->decrypt($password);
-		$token = $mailAccount->getOauthAccessToken();
-		$token = $this->crypto->decrypt($token);
+		$token = null;
 		if ($password === 'XOAUTH2') {
-			$token = $this->oAuthHandler->refresh($account->getMailAccount());
+			$token = $this->oAuthHandler->getToken($account->getMailAccount(), $this->accountService);
 		}
 		$security = $mailAccount->getOutboundSslMode();
 		$params = [

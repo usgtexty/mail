@@ -103,7 +103,6 @@ class AccountsController extends Controller {
 	 * @param SetupService $setup
 	 * @param IMailManager $mailManager
 	 * @param SyncService $syncService
-	 * @param OAuthHandler $oAuthHandler
 	 */
 	public function __construct(string $appName,
 								   IRequest $request,
@@ -116,8 +115,7 @@ class AccountsController extends Controller {
 								   IMailTransmission $mailTransmission,
 								   SetupService $setup,
 								   IMailManager $mailManager,
-								   SyncService $syncService,
-								   OAuthHandler $oAuthHandler
+								   SyncService $syncService
 	) {
 		parent::__construct($appName, $request);
 		$this->accountService = $accountService;
@@ -130,7 +128,7 @@ class AccountsController extends Controller {
 		$this->setup = $setup;
 		$this->mailManager = $mailManager;
 		$this->syncService = $syncService;
-		$this->oAuthHandler = $oAuthHandler;
+		$this->oAuthHandler = new OAuthHandler();
 	}
 
 	/**
