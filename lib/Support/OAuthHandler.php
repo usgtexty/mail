@@ -25,8 +25,14 @@ class OAuthHandler {
 	/** @var IClient */
 	private $client;
 
+	/** @var IURLGenerator */
+	private $urlGenerator;
+
 	/** @var AccountService */
 	private $accountService;
+
+	/** @var string */
+	private $redirectUrl;
 
 	/**
 	 * OAuth Manager constructor
@@ -37,7 +43,23 @@ class OAuthHandler {
 		$this->crypto = OC::$server->getCrypto();
 		$this->config = OC::$server->getConfig();
 		$this->request = OC::$server->getRequest();
+		$this->urlGenerator = OC::$server->getURLGenerator();
 		$this->client = OC::$server->getHTTPClientService()->newClient();
+		$this->redirectUrl = $this->urlGenerator->linkToRouteAbsolute('mail.page.oauth');
+	}
+
+	public function getProviders(): array {
+		$msq = http_build_query([
+			'client_id' => $this->config->getSystemValue('ms_azure_client_id'),
+			'response_type' => 'code',
+			'response_mode' => 'query',
+			'redirect_uri' => $this->redirectUrl,
+			'scope' => 'profile openid offline_access https://outlook.office.com/IMAP.AccessAsUser.All https://outlook.office.com/SMTP.Send',
+			'state' => 'microsoft',
+		]);
+		return [
+			'microsoft' => 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize?' . $msq,
+		];
 	}
 
 	public function authorize(string $provider) {
@@ -58,7 +80,7 @@ class OAuthHandler {
 				'client_id' => $clientId,
 				'client_secret' => $clientSecret,
 				'scope' => 'offline_access https://outlook.office.com/IMAP.AccessAsUser.All https://outlook.office.com/SMTP.Send',
-				'redirect_uri' => 'http://localhost:8090/auth.php', // TODO: Change this
+				'redirect_uri' => $this->redirectUrl,
 				'grant_type' => 'authorization_code',
 				'code' => $this->request->getParam('code'),
 			]
@@ -148,7 +170,7 @@ class OAuthHandler {
 				'body' => [
 					'client_id' => $clientId,
 					'client_secret' => $clientSecret,
-					'redirect_uri' => 'http://localhost:8090/auth.php', // TODO: Change this
+					'redirect_uri' => $this->redirectUrl,
 					'grant_type' => 'refresh_token',
 					'refresh_token' => $refreshToken,
 				]

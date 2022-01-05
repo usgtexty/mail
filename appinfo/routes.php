@@ -304,11 +304,6 @@ return [
 			'url' => '/api/thread/{id}',
 			'verb' => 'POST'
 		],
-		[
-			'name' => 'accounts#oAuthConnect',
-			'url' => '/api/oauth/{provider}',
-			'verb' => 'POST'
-		],
 	],
 	'resources' => [
 		'accounts' => ['url' => '/api/accounts'],

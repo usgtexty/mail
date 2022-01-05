@@ -31,6 +31,8 @@ use OCA\Mail\Contracts\IUserPreferences;
 use OCA\Mail\Db\TagMapper;
 use OCA\Mail\Service\AccountService;
 use OCA\Mail\Service\AliasesService;
+use OCA\Mail\Service\SetupService;
+use OCA\Mail\Support\OAuthHandler;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http\ContentSecurityPolicy;
 use OCP\AppFramework\Http\RedirectResponse;
@@ -79,6 +81,12 @@ class PageController extends Controller {
 	/** @var LoggerInterface */
 	private $logger;
 
+	/** @var SetupService */
+	private $setup;
+
+	/** @var OAuthHandler */
+	private $oAuthHandler;
+
 	public function __construct(string $appName,
 								IRequest $request,
 								IURLGenerator $urlGenerator,
@@ -91,7 +99,8 @@ class PageController extends Controller {
 								IMailManager $mailManager,
 								TagMapper $tagMapper,
 								IInitialState $initialStateService,
-								LoggerInterface $logger) {
+								LoggerInterface $logger,
+							    SetupService $setup) {
 		parent::__construct($appName, $request);
 
 		$this->urlGenerator = $urlGenerator;
@@ -105,6 +114,8 @@ class PageController extends Controller {
 		$this->tagMapper = $tagMapper;
 		$this->initialStateService = $initialStateService;
 		$this->logger = $logger;
+		$this->setup = $setup;
+		$this->oAuthHandler = new OAuthHandler();
 	}
 
 	/**
@@ -168,6 +179,10 @@ class PageController extends Controller {
 			'prefill_email',
 			$this->config->getUserValue($user->getUID(), 'settings', 'email', '')
 		);
+		$this->initialStateService->provideInitialState(
+			'oauth_providers',
+			$this->oAuthHandler->getProviders()
+		);
 
 		$csp = new ContentSecurityPolicy();
 		$csp->addAllowedFrameDomain('\'self\'');
@@ -176,22 +191,6 @@ class PageController extends Controller {
 		$response->setContentSecurityPolicy($csp);
 
 		return $response;
-	}
-
-	public function oauth(): TemplateResponse {
-		$msMail = 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize';
-		$params = http_build_query([
-			'client_id' => $this->config->getSystemValue('mail.oauth.clientid', ''),
-			'response_type' => 'code',
-			'redirect_uri' => $this->urlGenerator->linkToRouteAbsolute('mail.page.oauth'),
-			'scope' => 'profile openid offline_access https://outlook.office.com/IMAP.AccessAsUser.All https://outlook.office.com/SMTP.Send',
-			'state' => '',
-			'response_mode' => 'query',
-		]);
-		return new TemplateResponse($this->appName, 'oauth', [
-			'microsoft' => "$msMail?$params",
-			'google' => null,
-		]);
 	}
 
 	/**
@@ -290,4 +289,70 @@ class PageController extends Controller {
 	public function mailto(): TemplateResponse {
 		return $this->index();
 	}
+
+	/**
+	 * @NoAdminRequired
+	 * @NoCSRFRequired
+	 * 
+	 * @return TemplateResponse
+	 */
+	public function oauth(): TemplateResponse {
+		$authed = $this->oAuthConnect();
+
+		return new TemplateResponse($this->appName, 'oauth', [
+			'authed' => $authed
+		]);
+	}
+
+	private function oAuthConnect(): array {
+		$state = $this->request->getParam('state');
+		$provider = $state === 'microsoft' ? 'microsoft' : 'google';
+
+		$account = null;
+		$errorMessage = 'Setup Error!';
+		try {
+			$data 	= $this->oAuthHandler->authorize($provider);
+			$account = $this->setup->createNewAccount(
+				$data['name'], $data['email'], $data['imap_host'], $data['imap_port'],
+				$data['imap_ssl_mode'], $data['email'],'XOAUTH2',
+				$data['smtp_host'], $data['smtp_port'], $data['smtp_ssl_mode'], $data['email'], 'XOAUTH2', $this->currentUserId,
+				null,
+				$provider, $data['access_token'], $data['refresh_token'], $data['id_token'], $data['expires_in']
+			);
+		} catch (Exception $ex) {
+			$errorMessage = $ex->getMessage();
+		}
+
+		if (is_null($account)) {
+			$this->logger->error('Creating account failed: ' . $errorMessage);
+			
+			return [
+				'status' => 'error',
+				'message' => $errorMessage,
+				'url' => $this->urlGenerator->linkToRoute('mail.page.index')
+			];
+		}
+
+		return [
+			'status' => 'success',
+			'message' => 'Account has been created.',
+			'url' => $this->urlGenerator->linkToRoute('mail.page.index')
+		];
+	}
+
+	// public function oauth(): TemplateResponse {
+	// 	$msMail = 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize';
+	// 	$params = http_build_query([
+	// 		'client_id' => $this->config->getSystemValue('mail.oauth.clientid', ''),
+	// 		'response_type' => 'code',
+	// 		'redirect_uri' => $this->urlGenerator->linkToRouteAbsolute('mail.page.oauth'),
+	// 		'scope' => 'profile openid offline_access https://outlook.office.com/IMAP.AccessAsUser.All https://outlook.office.com/SMTP.Send',
+	// 		'state' => '',
+	// 		'response_mode' => 'query',
+	// 	]);
+	// 	return new TemplateResponse($this->appName, 'oauth', [
+	// 		'microsoft' => "$msMail?$params",
+	// 		'google' => null,
+	// 	]);
+	// }
 }
