@@ -64,7 +64,7 @@ class OAuthHandler {
 
 	public function authorize(string $provider) {
 		$method = $provider . 'Authorize';
-		if (!method_exists(static::class, $method)) {
+		if (!method_exists($this, $method)) {
 			throw new \Exception('Unsupported Provider!');
 		}
 
@@ -95,7 +95,7 @@ class OAuthHandler {
 			'access_token' => $body['access_token'] ?? null,
 			'refresh_token' => $body['refresh_token'] ?? null,
 			'id_token' => $body['id_token'] ?? null,
-			'expire_in' => isset($body['expire_in']) ? time() + $body['expire_in'] : null,
+			'expire_in' => isset($body['expires_in']) ? time() + $body['expires_in'] : null,
 			'imap_host' => 'outlook.office365.com',
 			'imap_port' => 993,
 			'imap_ssl_mode' => 'ssl',

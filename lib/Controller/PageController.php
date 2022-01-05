@@ -316,8 +316,7 @@ class PageController extends Controller {
 				$data['name'], $data['email'], $data['imap_host'], $data['imap_port'],
 				$data['imap_ssl_mode'], $data['email'],'XOAUTH2',
 				$data['smtp_host'], $data['smtp_port'], $data['smtp_ssl_mode'], $data['email'], 'XOAUTH2', $this->currentUserId,
-				null,
-				$provider, $data['access_token'], $data['refresh_token'], $data['id_token'], $data['expires_in']
+				null, $provider, $data['access_token'], $data['refresh_token'], $data['id_token'], $data['expires_in']
 			);
 		} catch (Exception $ex) {
 			$errorMessage = $ex->getMessage();
@@ -339,20 +338,4 @@ class PageController extends Controller {
 			'url' => $this->urlGenerator->linkToRoute('mail.page.index')
 		];
 	}
-
-	// public function oauth(): TemplateResponse {
-	// 	$msMail = 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize';
-	// 	$params = http_build_query([
-	// 		'client_id' => $this->config->getSystemValue('mail.oauth.clientid', ''),
-	// 		'response_type' => 'code',
-	// 		'redirect_uri' => $this->urlGenerator->linkToRouteAbsolute('mail.page.oauth'),
-	// 		'scope' => 'profile openid offline_access https://outlook.office.com/IMAP.AccessAsUser.All https://outlook.office.com/SMTP.Send',
-	// 		'state' => '',
-	// 		'response_mode' => 'query',
-	// 	]);
-	// 	return new TemplateResponse($this->appName, 'oauth', [
-	// 		'microsoft' => "$msMail?$params",
-	// 		'google' => null,
-	// 	]);
-	// }
 }
