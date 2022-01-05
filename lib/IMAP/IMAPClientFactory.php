@@ -75,7 +75,7 @@ class IMAPClientFactory {
 			$password = $account->getMailAccount()->getInboundPassword();
 			$password = $this->crypto->decrypt($password);
 			$token = $account->getMailAccount()->getOauthAccessToken();
-			$token = $this->crypto->decrypt($token);
+			$token = null;
 			if ($password === 'XOAUTH2') {
 				$token = $this->oAuthHandler->getToken($account->getMailAccount(), $this->accountService);
 			}
