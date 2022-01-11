@@ -49,7 +49,7 @@ class OAuthHandler {
 	}
 
 	public function getProviders(): array {
-		$msq = http_build_query([
+		$msQuery = http_build_query([
 			'client_id' => $this->config->getSystemValue('ms_azure_client_id'),
 			'response_type' => 'code',
 			'response_mode' => 'query',
@@ -57,8 +57,20 @@ class OAuthHandler {
 			'scope' => 'profile openid offline_access https://outlook.office.com/IMAP.AccessAsUser.All https://outlook.office.com/SMTP.Send',
 			'state' => 'microsoft',
 		]);
+
+		$googleQuery = http_build_query([
+			'client_id' => $this->config->getSystemValue('google_client_id'),
+			'access_type' => 'offline',
+			'include_granted_scopes' => 'true',
+			'response_type' => 'code',
+			'redirect_uri' => $this->redirectUrl,
+			'scope' => 'https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile https://mail.google.com/',
+			'state' => 'google',
+		]);
+
 		return [
-			'microsoft' => 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize?' . $msq,
+			'microsoft' => 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize?' . $msQuery,
+			'google' => 'https://accounts.google.com/o/oauth2/v2/auth?' . $googleQuery,
 		];
 	}
 
@@ -74,7 +86,6 @@ class OAuthHandler {
 	private function microsoftAuthorize(): array {
 		$clientId =  $this->config->getSystemValue('ms_azure_client_id');
 		$clientSecret =  $this->config->getSystemValue('ms_azure_client_secret');
-
 		$request = $this->client->post('https://login.microsoftonline.com/common/oauth2/v2.0/token', [
 			'body' => [
 				'client_id' => $clientId,
@@ -109,13 +120,31 @@ class OAuthHandler {
 	}
 
 	private function googleAuthorize(): array {
+		$clientId =  $this->config->getSystemValue('google_client_id');
+		$clientSecret =  $this->config->getSystemValue('google_client_secret');
+		$request = $this->client->post('https://oauth2.googleapis.com/token', [
+			'body' => [
+				'client_id' => $clientId,
+				'client_secret' => $clientSecret,
+				'scope' => 'https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile https://mail.google.com/',
+				'redirect_uri' => $this->redirectUrl,
+				'grant_type' => 'authorization_code',
+				'code' => $this->request->getParam('code'),
+				'access_type' => 'offline',
+				'include_granted_scopes' => 'true',
+			]
+		]);
+
+		$body = json_decode($request->getBody(), true);
+		$decoded = json_decode(base64_decode(str_replace('_', '/', str_replace('-','+',explode('.', $body['id_token'] ?? '')[1]))), true);
+
 		return [
-			'name' => null,
-			'email' => null,
-			'access_token' => null,
-			'refresh_token' => null,
-			'id_token' => null,
-			'expire_in' => null,
+			'name' => $decoded['name'] ?? null,
+			'email' => $decoded['email'] ?? null,
+			'access_token' => $body['access_token'] ?? null,
+			'refresh_token' => $body['refresh_token'] ?? null,
+			'id_token' => $body['id_token'] ?? null,
+			'expire_in' => isset($body['expires_in']) ? time() + $body['expires_in'] : null,
 			'imap_host' => 'imap.gmail.com',
 			'imap_port' => 993,
 			'imap_ssl_mode' => 'ssl',
@@ -195,11 +224,40 @@ class OAuthHandler {
 	}
 
 	public function googleRefresh() {
-		return [
-			'access_token' => null,
-			'refresh_token' => null,
-			'id_token' => null,
-			'expire_in' => time(),
-		];
+		$clientId =  $this->config->getSystemValue('google_client_id');
+		$clientSecret =  $this->config->getSystemValue('google_client_secret');
+		$refreshToken = $this->account->getOauthRefreshToken();
+		$refreshToken = $this->crypto->decrypt($refreshToken);
+
+		try {
+			$request = $this->client->post('https://oauth2.googleapis.com/token', [
+				'body' => [
+					'scope' => 'https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile https://mail.google.com/',
+					'client_id' => $clientId,
+					'client_secret' => $clientSecret,
+					'redirect_uri' => $this->redirectUrl,
+					'grant_type' => 'refresh_token',
+					'refresh_token' => $refreshToken,
+					'access_type' => 'offline',
+					'include_granted_scopes' => 'true',
+				]
+			]);
+
+			$body = json_decode($request->getBody(), true);
+
+			return [
+				'status' => 'success',
+				'message' => 'Token has been fetched.',
+				'access_token' => $body['access_token'],
+				'refresh_token' => $refreshToken,
+				'id_token' => $body['id_token'],
+				'expire_in' => time() + $body['expires_in'],
+			];
+		} catch (\Exception $e) {
+			return [
+				'status' => 'error',
+				'message' => $e->getMessage()
+			];
+		}
 	}
 }

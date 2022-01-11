@@ -12,7 +12,9 @@
 				</div>
 
 				<div v-if="oauthProviders.google" class="auth-provider" :title="t('mail', 'Sign in with Google')">
-					<img :src="googleLoginImage" alt="Sign in with Google">
+					<a :href="oauthProviders.google">
+						<img :src="googleLoginImage" alt="Sign in with Google">
+					</a>
 				</div>
 			</Tab>
 			<Tab id="auto" key="auto" :name="t('mail', 'Auto')">
@@ -403,7 +405,7 @@ export default {
 }
 </style>
 
-<style scoped>
+<style lang="scss" scoped>
 h4 {
 	text-align: left;
 }
@@ -433,9 +435,13 @@ input[type='radio'][disabled] + label {
 	opacity: 0.5;
 }
 
-.auth-provider > img,
-.auth-provider > svg {
-	width:  100%;
-	height:  auto;
+.auth-provider > a {
+	display: block;
+	
+	> img,
+	> svg {
+		width:  100%;
+		height:  auto;
+	}
 }
 </style>
