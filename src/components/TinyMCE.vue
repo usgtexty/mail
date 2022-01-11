@@ -8,6 +8,8 @@ import 'tinymce/themes/silver'
 import 'tinymce/icons/default'
 import 'tinymce/skins/ui/oxide/skin.css'
 import 'tinymce/plugins/advlist'
+import 'tinymce/plugins/code'
+import 'tinymce/plugins/autoresize'
 import 'tinymce/plugins/autolink'
 import 'tinymce/plugins/link'
 import 'tinymce/plugins/lists'
@@ -39,15 +41,11 @@ export default {
 			tinymce.init({
 				selector: '#' + this.id,
 				menubar: false,
-				inline: true,
-				toolbar: false,
-				visual: false,
+				statusbar: false,
 				plugins: [
-					'advlist autolink link lists image quickbars help'
+					'advlist code autoresize autolink link lists image help'
 				],
-				quickbars_insert_toolbar: 'quicktable image',
-				quickbars_selection_toolbar: 'bold italic underline strikethrough | blockquote quicklink | alignleft aligncenter alignright alignjustify |' +
-					' outdent indent | numlist bullist | forecolor backcolor removeformat',
+				toolbar: 'undo redo | bold italic | forecolor backcolor | code | alignleft aligncenter alignright alignjustify | bullist numlist | inserttable link image',
 				contextmenu: 'undo redo | inserttable | cell row column deletetable | help',
 				skin: false,
 				content_css: false,
@@ -66,10 +64,17 @@ export default {
 }
 </script>
 
+<style>
+.tox.tox-silver-sink.tox-tinymce-aux {
+	z-index: 9999;
+}
+.tox.tox-tinymce {
+	flex-grow: 1;
+}
+</style>
+
 <style lang="scss" scoped>
 .custom-tinymce-editor {
-	width: 100%;
-	min-height: 250px;
 	border: none;
 }
 

@@ -30,6 +30,13 @@
 			<label for="signature-above-quote-toggle">
 				{{ t("mail", "Place signature above quoted text") }}
 			</label>
+			<p>
+				<em>
+					{{ t("mail", "If you want to use visual signature, make sure check the \"Rich Text\" option below.") }}
+					<svg width="24" height="24" focusable="false"><g fill-rule="nonzero"><path d="M9.8 15.7c.3.3.3.8 0 1-.3.4-.9.4-1.2 0l-4.4-4.1a.8.8 0 010-1.2l4.4-4.2c.3-.3.9-.3 1.2 0 .3.3.3.8 0 1.1L6 12l3.8 3.7zM14.2 15.7c-.3.3-.3.8 0 1 .4.4.9.4 1.2 0l4.4-4.1c.3-.3.3-.9 0-1.2l-4.4-4.2a.8.8 0 00-1.2 0c-.3.3-.3.8 0 1.1L18 12l-3.8 3.7z"></path></g></svg>
+					{{ t("mail", " use it to use HTML signature.") }}
+			</em>
+			</p>
 		</div>
 		<Multiselect
 			v-if="identities.length > 1"
@@ -164,11 +171,6 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-.signature-editor {
-	border: 1px solid #dddddd;
-	height: 175px;
-	overflow: scroll;
-}
 .ck.ck-editor__editable_inline {
   width: 100%;
   max-width: 78vw;
