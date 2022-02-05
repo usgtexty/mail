@@ -59,3 +59,50 @@ start-docker:
 appstore:
 	krankerl package
 
+assemble:
+	rm -rf $(build_dir)
+	mkdir -p $(build_dir)
+	rsync -a \
+	--exclude=babel.config.js \
+	--exclude=build \
+	--exclude=composer.json \
+	--exclude=composer.lock \
+	--exclude=docs \
+	--exclude=.drone.yml \
+	--exclude=tsconfig.json \
+	--exclude=phpunit.xml \
+	--exclude=.eslintignore \
+	--exclude=.eslintrc.js \
+	--exclude=.git \
+	--exclude=.gitattributes \
+	--exclude=.github \
+	--exclude=.gitignore \
+	--exclude=.l10nignore \
+	--exclude=mkdocs.yml \
+	--exclude=krankerl.toml \
+	--exclude=karma.conf.js \
+	--exclude=postcss.config.js \
+	--exclude=Gruntfile.js \
+	--exclude=codecov.yml \
+	--exclude=Makefile \
+	--exclude=node_modules \
+	--exclude=package.json \
+	--exclude=package-lock.json \
+	--exclude=.php_cs.dist \
+	--exclude=.php_cs.cache \
+	--exclude=psalm.xml \
+	--exclude=README.md \
+	--exclude=src \
+	--exclude=.stylelintignore \
+	--exclude=stylelint.config.js \
+	--exclude=.tx \
+	--exclude=tests \
+	--exclude=vendor-bin \
+	--exclude=webpack.js \
+	--exclude=webpack.common.js \
+	--exclude=webpack.dev.js \
+	--exclude=webpack.prod.js \
+	--exclude=webpack.test.js \
+	$(project_dir) $(build_dir)
+	tar -czf $(build_dir)/$(app_name).tar.gz \
+		-C $(build_dir) $(app_name)

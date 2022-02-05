@@ -4,7 +4,7 @@
 		<div id="emptycontent">
 			<div class="icon-mail" />
 			<h2>{{ t('mail', 'Connect your mail account') }}</h2>
-			<AccountForm :display-name="displayName" :email="email" :save="onSave">
+			<AccountForm :oauth-providers="oauthProviders" :display-name="displayName" :email="email" :save="onSave">
 				<template v-if="error" #feedback class="warning">
 					{{ error }}
 				</template>
@@ -33,6 +33,7 @@ export default {
 		return {
 			displayName: loadState('mail', 'prefill_displayName'),
 			email: loadState('mail', 'prefill_email'),
+			oauthProviders: loadState('mail', 'oauth_providers'),
 			error: null,
 		}
 	},

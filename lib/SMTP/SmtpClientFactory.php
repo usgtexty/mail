@@ -30,7 +30,9 @@ use Horde_Mail_Transport;
 use Horde_Mail_Transport_Mail;
 use Horde_Mail_Transport_Smtphorde;
 use OCA\Mail\Account;
+use OCA\Mail\Service\AccountService;
 use OCA\Mail\Support\HostNameFactory;
+use OCA\Mail\Support\OAuthHandler;
 use OCP\IConfig;
 use OCP\Security\ICrypto;
 
@@ -45,12 +47,21 @@ class SmtpClientFactory {
 	/** @var HostNameFactory */
 	private $hostNameFactory;
 
+	/** @var AccountService */
+	private $accountService;
+
+	/** @var OAuthHandler */
+	private $oAuthHandler;
+
 	public function __construct(IConfig $config,
 								ICrypto $crypto,
-								HostNameFactory $hostNameFactory) {
+								HostNameFactory $hostNameFactory,
+							    AccountService $accountService) {
 		$this->config = $config;
 		$this->crypto = $crypto;
 		$this->hostNameFactory = $hostNameFactory;
+		$this->accountService = $accountService;
+		$this->oAuthHandler = new OAuthHandler();
 	}
 
 	/**
@@ -65,15 +76,21 @@ class SmtpClientFactory {
 			return new Horde_Mail_Transport_Mail();
 		}
 
+		$user = $mailAccount->getOutboundUser();
 		$password = $mailAccount->getOutboundPassword();
 		$password = $this->crypto->decrypt($password);
+		$token = null;
+		if ($password === 'XOAUTH2') {
+			$token = $this->oAuthHandler->getToken($account->getMailAccount(), $this->accountService);
+		}
 		$security = $mailAccount->getOutboundSslMode();
 		$params = [
 			'localhost' => $this->hostNameFactory->getHostName(),
 			'host' => $mailAccount->getOutboundHost(),
 			'password' => $password,
+			'xoauth2_token' => (new \Horde_Smtp_Password_Xoauth2($user, $token))->getPassword(),
 			'port' => $mailAccount->getOutboundPort(),
-			'username' => $mailAccount->getOutboundUser(),
+			'username' => $user,
 			'secure' => $security === 'none' ? false : $security,
 			'timeout' => (int)$this->config->getSystemValue('app.mail.smtp.timeout', 5),
 			'context' => [

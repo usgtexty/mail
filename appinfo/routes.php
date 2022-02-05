@@ -40,6 +40,11 @@ return [
 			'verb' => 'GET'
 		],
 		[
+			'name' => 'page#oauth',
+			'url' => '/oauth',
+			'verb' => 'GET'
+		],
+		[
 			'name' => 'page#thread',
 			'url' => '/box/{mailboxId}/thread/{id}',
 			'verb' => 'GET'
