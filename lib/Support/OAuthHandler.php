@@ -56,6 +56,7 @@ class OAuthHandler {
 			'redirect_uri' => $this->redirectUrl,
 			'scope' => 'profile openid offline_access https://outlook.office.com/IMAP.AccessAsUser.All https://outlook.office.com/SMTP.Send',
 			'state' => 'microsoft',
+			'prompt' => 'consent'
 		]);
 
 		$googleQuery = http_build_query([
@@ -66,6 +67,7 @@ class OAuthHandler {
 			'redirect_uri' => $this->redirectUrl,
 			'scope' => 'https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile https://mail.google.com/',
 			'state' => 'google',
+			'prompt' => 'consent'
 		]);
 
 		return [
