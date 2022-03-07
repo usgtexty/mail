@@ -70,6 +70,11 @@ return [
 			'verb' => 'GET'
 		],
 		[
+			'name' => 'page#oauth',
+			'url' => '/oauth',
+			'verb' => 'GET'
+		],
+		[
 			'name' => 'accounts#send',
 			'url' => '/api/accounts/{id}/send',
 			'verb' => 'POST'
