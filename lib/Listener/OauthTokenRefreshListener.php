@@ -45,7 +45,7 @@ class OauthTokenRefreshListener implements IEventListener {
 		if (!($event instanceof BeforeImapClientCreated)) {
 			return;
 		}
-		if (!$this->googleIntegration->isGoogleOauthAccount($event->getAccount())) {
+		if (!$this->googleIntegration->isOauthAccount($event->getAccount())) {
 			return;
 		}
 

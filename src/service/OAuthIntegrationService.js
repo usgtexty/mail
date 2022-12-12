@@ -22,10 +22,11 @@
 import axios from '@nextcloud/axios'
 import { generateUrl } from '@nextcloud/router'
 
-export async function configure(clientId, clientSecret) {
+export async function configure(provider, clientId, clientSecret) {
 	const response = await axios.post(
 		generateUrl('/apps/mail/api/integration/google'),
 		{
+			provider,
 			clientId,
 			clientSecret,
 		},
@@ -39,10 +40,13 @@ export async function configure(clientId, clientSecret) {
 	return response.data.data
 }
 
-export async function unlink() {
+export async function unlink(provider) {
 	const response = await axios.delete(
 		generateUrl('/apps/mail/api/integration/google'),
 		{
+			data: {
+				provider,
+			},
 			headers: {
 				Accept: 'application/json',
 			},

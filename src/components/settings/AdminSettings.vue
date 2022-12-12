@@ -202,7 +202,39 @@
 					}}
 				</p>
 			</article>
-			<GmailAdminOauthSettings :client-id="googleOauthClientId" />
+			<GmailAdminOauthSettings provider="google" :client-id="googleOauthClientId" />
+		</div>
+		<div class="app-description">
+			<h3>
+				{{
+					t(
+						'mail',
+						'Microsoft integration'
+					)
+				}}
+			</h3>
+			<article>
+				<p>
+					{{
+						t(
+							'mail',
+							'Microsoft allows users to access their email via IMAP. For security reasons this access is only possible with an OAuth 2.0 connection or Microsoft accounts that use two-factor authentication and app passwords.'
+						)
+					}}
+				</p>
+				<p>
+					{{
+						t(
+							'mail',
+							'You have to register a new Client ID for a "Web application" in the Microsoft Azure Portal. Add the URL {url} as authorized redirect URI.',
+							{
+								url: microsoftOauthRedirectUrl,
+							}
+						)
+					}}
+				</p>
+			</article>
+			<GmailAdminOauthSettings provider="microsoft" :client-id="microsoftOauthClientId" />
 		</div>
 	</SettingsSection>
 </template>
@@ -230,6 +262,8 @@ import {
 
 const googleOauthClientId = loadState('mail', 'google_oauth_client_id', null) ?? undefined
 const googleOauthRedirectUrl = loadState('mail', 'google_oauth_redirect_url', null)
+const microsoftOauthClientId = loadState('mail', 'microsoft_oauth_client_id', null) ?? undefined
+const microsoftOauthRedirectUrl = loadState('mail', 'microsoft_oauth_redirect_url', null)
 
 export default {
 	name: 'AdminSettings',
@@ -256,6 +290,8 @@ export default {
 			configs: this.provisioningSettings,
 			googleOauthClientId,
 			googleOauthRedirectUrl,
+			microsoftOauthClientId,
+			microsoftOauthRedirectUrl,
 			preview: {
 				provisioningDomain: '',
 				emailTemplate: '',

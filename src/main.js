@@ -102,6 +102,7 @@ const tags = loadState('mail', 'tags', [])
 const outboxMessages = loadState('mail', 'outbox-messages')
 const disableScheduledSend = loadState('mail', 'disable-scheduled-send')
 const googleOauthUrl = loadState('mail', 'google-oauth-url', null)
+const microsoftOauthUrl = loadState('mail', 'microsoft-oauth-url', null)
 
 accounts.map(fixAccountId).forEach((account) => {
 	const settings = accountSettings.find(settings => settings.accountId === account.id)
@@ -124,6 +125,7 @@ outboxMessages.forEach(message => store.commit('outbox/addMessage', { message })
 
 store.commit('setScheduledSendingDisabled', disableScheduledSend)
 store.commit('setGoogleOauthUrl', googleOauthUrl)
+store.commit('setMicrosoftOauthUrl', microsoftOauthUrl)
 
 export default new Vue({
 	el: '#content',

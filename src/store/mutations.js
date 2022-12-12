@@ -409,4 +409,7 @@ export default {
 	setGoogleOauthUrl(state, url) {
 		state.googleOauthUrl = url
 	},
+	setMicrosoftOauthUrl(state, url) {
+		state.microsoftOauthUrl = url
+	},
 }

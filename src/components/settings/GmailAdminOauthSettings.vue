@@ -48,7 +48,7 @@
 import { showError, showSuccess } from '@nextcloud/dialogs'
 import { translate as t } from '@nextcloud/l10n'
 
-import { configure, unlink } from '../../service/GoogleIntegrationService'
+import { configure, unlink } from '../../service/OAuthIntegrationService'
 import logger from '../../logger'
 
 const PASSWORD_PLACEHOLDER = '*****'
@@ -56,6 +56,10 @@ const PASSWORD_PLACEHOLDER = '*****'
 export default {
 	name: 'GmailAdminOauthSettings',
 	props: {
+		provider: {
+			type: String,
+			default: '',
+		},
 		clientId: {
 			type: String,
 			default: '',
@@ -72,7 +76,7 @@ export default {
 		async onSubmit() {
 			this.loading = true
 			try {
-				await configure(this.clientIdVal, this.clientSecret)
+				await configure(this.provider, this.clientIdVal, this.clientSecret)
 				showSuccess(t('mail', 'Google integration configured'))
 			} catch (error) {
 				logger.error('Could not configure Google integration', { error })
@@ -84,7 +88,7 @@ export default {
 		async onUnlink() {
 			this.loading = true
 			try {
-				await unlink()
+				await unlink(this.provider)
 				this.clientIdVal = ''
 				this.clientSecret = ''
 				showSuccess(t('mail', 'Google integration unlinked'))

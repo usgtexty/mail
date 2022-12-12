@@ -192,11 +192,32 @@ class PageController extends Controller {
 				'google-oauth-url',
 				'https://accounts.google.com/o/oauth2/v2/auth?' . http_build_query([
 					'client_id' => $clientId,
-					'redirect_uri' => $this->urlGenerator->linkToRouteAbsolute('mail.googleIntegration.oauthRedirect'),
+					'redirect_uri' => $this->urlGenerator->linkToRouteAbsolute('mail.googleIntegration.oauthRedirect', [
+						'provider' => 'google'
+					]),
 					'response_type' => 'code',
 					'prompt' => 'consent',
 					'state' => '_accountId_', // Replaced by frontend
 					'scope' => 'https://mail.google.com/',
+					'access_type' => 'offline',
+					'login_hint' => '_email_', // Replaced by frontend
+				]),
+			);
+		}
+
+		$clientId = $this->config->getAppValue(Application::APP_ID, 'microsoft_oauth_client_id');
+		if (!empty($clientId)) {
+			$this->initialStateService->provideInitialState(
+				'microsoft-oauth-url',
+				'https://login.microsoftonline.com/common/oauth2/v2.0/authorize?' . http_build_query([
+					'client_id' => $clientId,
+					'redirect_uri' => $this->urlGenerator->linkToRouteAbsolute('mail.googleIntegration.oauthRedirect', [
+						'provider' => 'microsoft'
+					]),
+					'response_type' => 'code',
+					'prompt' => 'consent',
+					'state' => '_accountId_', // Replaced by frontend
+					'scope' => 'offline_access https://outlook.office.com/IMAP.AccessAsUser.All https://outlook.office.com/SMTP.Send',
 					'access_type' => 'offline',
 					'login_hint' => '_email_', // Replaced by frontend
 				]),

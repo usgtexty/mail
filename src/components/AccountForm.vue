@@ -26,11 +26,11 @@
 				<p v-if="!isValidEmail(emailAddress)" class="account-form--error">
 					{{ t('mail', 'Please enter an email of the format name@example.com') }}
 				</p>
-				<label v-if="!useGoogleSso"
+				<label v-if="!useSso"
 					for="auto-password"
 					class="account-form__label--required">{{ t('mail', 'Password') }}</label>
 				<input
-					v-if="!useGoogleSso"
+					v-if="!useSso"
 					id="auto-password"
 					v-model="autoConfig.password"
 					:disabled="loading"
@@ -130,8 +130,8 @@
 					:disabled="loading"
 					required
 					@change="clearFeedback">
-				<label v-if="!useGoogleSso" for="man-imap-password" class="account-form__label--required">{{ t('mail', 'IMAP Password') }}</label>
-				<input v-if="!useGoogleSso"
+				<label v-if="!useSso" for="man-imap-password" class="account-form__label--required">{{ t('mail', 'IMAP Password') }}</label>
+				<input v-if="!useSso"
 					id="man-imap-password"
 					v-model="manualConfig.imapPassword"
 					type="password"
@@ -211,8 +211,8 @@
 					:disabled="loading"
 					required
 					@change="clearFeedback">
-				<label v-if="!useGoogleSso" for="man-smtp-password" class="account-form__label--required">{{ t('mail', 'SMTP Password') }}</label>
-				<input v-if="!useGoogleSso"
+				<label v-if="!useSso" for="man-smtp-password" class="account-form__label--required">{{ t('mail', 'SMTP Password') }}</label>
+				<input v-if="!useSso"
 					id="man-smtp-password"
 					v-model="manualConfig.smtpPassword"
 					type="password"
@@ -224,6 +224,9 @@
 		</Tabs>
 		<div v-if="isGoogleAccount && !googleOauthUrl" class="account-form__google-sso">
 			{{ t('mail', 'For the Google account to work with this app you need to enable two-factor authentication for Google and generate an app password.') }}
+		</div>
+		<div v-if="isMicrosoftAccount && !microsoftOauthUrl" class="account-form__google-sso">
+			{{ t('mail', 'For the Microsoft account to work with this app you need to enable two-factor authentication for Google and generate an app password.') }}
 		</div>
 		<div class="account-form__submit-buttons">
 			<ButtonVue v-if="mode === 'auto'"
@@ -332,6 +335,7 @@ export default {
 	computed: {
 		...mapGetters([
 			'googleOauthUrl',
+			'microsoftOauthUrl',
 		]),
 
 		settingsPage() {
@@ -348,7 +352,7 @@ export default {
 			}
 
 			return !this.emailAddress || !this.isValidEmail(this.emailAddress)
-				|| (!this.isGoogleAccount && !this.autoConfig.password)
+				|| (!this.useSso && !this.autoConfig.password)
 		},
 
 		isDisabledManual() {
@@ -362,9 +366,9 @@ export default {
 
 			return !this.emailAddress || !this.isValidEmail(this.emailAddress)
 				|| !this.manualConfig.imapHost || !this.manualConfig.imapPort
-				|| !this.manualConfig.imapUser || (!this.useGoogleSso && !this.manualConfig.imapPassword)
+				|| !this.manualConfig.imapUser || (!this.useSso && !this.manualConfig.imapPassword)
 				|| !this.manualConfig.smtpHost || !this.manualConfig.smtpPort
-				|| !this.manualConfig.smtpUser || (!this.useGoogleSso && !this.manualConfig.smtpPassword)
+				|| !this.manualConfig.smtpUser || (!this.useSso && !this.manualConfig.smtpPassword)
 		},
 
 		isGoogleAccount() {
@@ -380,12 +384,34 @@ export default {
 			return this.isGoogleAccount && this.googleOauthUrl
 		},
 
+		isMicrosoftAccount() {
+			if (this.mode === 'auto') {
+				return this.emailAddress.endsWith('@outlook.com')
+					|| this.emailAddress.endsWith('@hotmail.com')
+					|| this.emailAddress.endsWith('@live.com')
+			} else {
+				return this.manualConfig.imapHost === 'outlook.office365.com'
+					|| this.manualConfig.smtpHost === 'smtp.office365.com'
+			}
+		},
+
+		useMicrosoftSso() {
+			return this.isMicrosoftAccount && this.microsoftOauthUrl
+		},
+
+		useSso() {
+			return this.useGoogleSso || this.useMicrosoftSso
+		},
+
 		submitButtonText() {
 			if (this.loading) {
 				return this.loadingMessage ?? t('mail', 'Connecting')
 			}
 			if (this.useGoogleSso) {
 				return this.account ? t('mail', 'Reconnect Google account') : t('mail', 'Sign in with Google')
+			}
+			if (this.useMicrosoftSso) {
+				return this.account ? t('mail', 'Reconnect Microsoft account') : t('mail', 'Sign in with Microsoft')
 			}
 			return this.account ? t('mail', 'Save') : t('mail', 'Connect')
 		},
@@ -534,7 +560,7 @@ export default {
 					emailAddress: this.emailAddress,
 					imapHost: this.manualConfig.imapHost.trim(),
 					smtpHost: this.manualConfig.smtpHost.trim(),
-					authMethod: this.useGoogleSso ? 'xoauth2' : 'password',
+					authMethod: this.useSso ? 'xoauth2' : 'password',
 				}
 				if (!this.account) {
 					const account = await this.$store.dispatch('startAccountSetup', data)
@@ -544,6 +570,24 @@ export default {
 						try {
 							await getUserConsent(
 								this.googleOauthUrl
+									.replace('_accountId_', account.id)
+									.replace('_email_', encodeURIComponent(account.emailAddress))
+							)
+						} catch (e) {
+							// Clean up the temporary account before we continue
+							this.$store.dispatch('deleteAccount', account)
+							logger.info(`Temporary account ${account.id} deleted`)
+							throw e
+						}
+						this.clearFeedback()
+					}
+
+					if (this.useMicrosoftSso) {
+						this.loadingMessage = t('mail', 'Awaiting user consent')
+						this.feedback = t('mail', 'Account created. Please follow the popup instructions to link your Microsoft account')
+						try {
+							await getUserConsent(
+								this.microsoftOauthUrl
 									.replace('_accountId_', account.id)
 									.replace('_email_', encodeURIComponent(account.emailAddress))
 							)
@@ -570,6 +614,27 @@ export default {
 						try {
 							await getUserConsent(
 								this.googleOauthUrl
+									.replace('_accountId_', account.id)
+									.replace('_email_', encodeURIComponent(account.emailAddress))
+							)
+						} catch (e) {
+							// Undo changes
+							await this.$store.dispatch('updateAccount', {
+								...oldAccountData,
+								accountId: oldAccountData.id,
+							})
+							logger.info(`Account ${account.id} update undone`)
+							throw e
+						}
+						this.clearFeedback()
+					}
+
+					if (this.useMicrosoftSso) {
+						this.loadingMessage = t('mail', 'Awaiting user consent')
+						this.feedback = t('mail', 'Account updated. Please follow the popup instructions to reconnect your Microsoft account')
+						try {
+							await getUserConsent(
+								this.microsoftOauthUrl
 									.replace('_accountId_', account.id)
 									.replace('_email_', encodeURIComponent(account.emailAddress))
 							)

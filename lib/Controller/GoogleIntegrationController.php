@@ -57,17 +57,19 @@ class GoogleIntegrationController extends Controller {
 	}
 
 	/**
+	 * @param string $provider
 	 * @param string $clientId
 	 * @param string $clientSecret
 	 *
 	 * @return JsonResponse
 	 */
-	public function configure(string $clientId, string $clientSecret): JsonResponse {
-		if (empty($clientId) || empty($clientSecret)) {
+	public function configure(string $provider, string $clientId, string $clientSecret): JsonResponse {
+		if (!in_array($provider, ['google', 'microsoft']) || empty($clientId) || empty($clientSecret)) {
 			return JsonResponse::fail(null, Http::STATUS_UNPROCESSABLE_ENTITY);
 		}
 
 		$this->googleIntegration->configure(
+			$provider,
 			$clientId,
 			$clientSecret,
 		);
@@ -77,11 +79,13 @@ class GoogleIntegrationController extends Controller {
 		]);
 	}
 
-	/*
+	/**
+	 * @param string $provider
+	 *
 	 * @return JsonResponse
 	 */
-	public function unlink(): JsonResponse {
-		$this->googleIntegration->unlink();
+	public function unlink(string $provider): JsonResponse {
+		$this->googleIntegration->unlink($provider);
 
 		return JsonResponse::success([]);
 	}
@@ -98,8 +102,8 @@ class GoogleIntegrationController extends Controller {
 	 *
 	 * @return Response
 	 */
-	public function oauthRedirect(?string $code, ?string $state, ?string $scope, ?string $error): Response {
-		if ($this->userId === null) {
+	public function oauthRedirect(string $provider, ?string $code, ?string $state, ?string $scope, ?string $error): Response {
+		if (!in_array($provider, ['google', 'microsoft']) || $this->userId === null) {
 			// TODO: redirect to main nextcloud page
 			return new StandaloneTemplateResponse(
 				Application::APP_ID,
@@ -109,7 +113,7 @@ class GoogleIntegrationController extends Controller {
 			);
 		}
 
-		if (!isset($code, $state, $scope)) {
+		if (!isset($code, $state)) {
 			// TODO: handle error
 			return new StandaloneTemplateResponse(
 				Application::APP_ID,
@@ -151,6 +155,7 @@ class GoogleIntegrationController extends Controller {
 
 		$updated = $this->googleIntegration->finishConnect(
 			$account,
+			$provider,
 			$code,
 		);
 		$this->accountService->update($updated->getMailAccount());

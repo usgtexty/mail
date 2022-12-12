@@ -366,7 +366,7 @@ return [
 		],
 		[
 			'name' => 'googleIntegration#oauthRedirect',
-			'url' => '/integration/google-auth',
+			'url' => '/integration/{provider}-auth',
 			'verb' => 'GET',
 		],
 	],

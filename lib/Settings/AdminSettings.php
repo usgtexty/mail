@@ -92,12 +92,23 @@ class AdminSettings implements ISettings {
 		$this->initialStateService->provideInitialState(
 			Application::APP_ID,
 			'google_oauth_client_id',
-			$this->googleIntegration->getClientId(),
+			$this->googleIntegration->getClientId('google'),
 		);
 		$this->initialStateService->provideInitialState(
 			Application::APP_ID,
 			'google_oauth_redirect_url',
-			$this->googleIntegration->getRedirectUrl(),
+			$this->googleIntegration->getRedirectUrl('google'),
+		);
+
+		$this->initialStateService->provideInitialState(
+			Application::APP_ID,
+			'microsoft_oauth_client_id',
+			$this->googleIntegration->getClientId('microsoft'),
+		);
+		$this->initialStateService->provideInitialState(
+			Application::APP_ID,
+			'microsoft_oauth_redirect_url',
+			$this->googleIntegration->getRedirectUrl('microsoft'),
 		);
 
 		return new TemplateResponse(Application::APP_ID, 'settings-admin');

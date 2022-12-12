@@ -59,47 +59,46 @@ class GoogleIntegration {
 		$this->logger = $logger;
 	}
 
-	public function configure(string $clientId, string $clientSecret): void {
+	public function configure(string $provider, string $clientId, string $clientSecret): void {
 		$this->config->setAppValue(
 			Application::APP_ID,
-			'google_oauth_client_id',
+			"{$provider}_oauth_client_id",
 			$clientId
 		);
 		$this->config->setAppValue(
 			Application::APP_ID,
-			'google_oauth_client_secret',
+			"{$provider}_oauth_client_secret",
 			$this->crypto->encrypt($clientSecret),
 		);
 	}
 
-	public function unlink() {
+	public function unlink($provider) {
 		$this->config->deleteAppValue(
 			Application::APP_ID,
-			'google_oauth_client_id',
+			"{$provider}_oauth_client_id",
 		);
 		$this->config->deleteAppValue(
 			Application::APP_ID,
-			'google_oauth_client_secret',
+			"${$provider}_oauth_client_secret",
 		);
 	}
 
-	public function getClientId(): ?string {
-		$value = $this->config->getAppValue(Application::APP_ID, 'google_oauth_client_id');
+	public function getClientId($provider): ?string {
+		$value = $this->config->getAppValue(Application::APP_ID, "{$provider}_oauth_client_id");
 		if ($value === '') {
 			return null;
 		}
 		return $value;
 	}
 
-	public function isGoogleOauthAccount(Account $account): bool {
-		return $account->getMailAccount()->getInboundHost() === 'imap.gmail.com'
+	public function isOauthAccount(Account $account): bool {
+		return in_array($account->getMailAccount()->getInboundHost(), ['imap.gmail.com', 'outlook.office365.com'])
 			&& $account->getMailAccount()->getAuthMethod() === 'xoauth2';
 	}
 
-	public function finishConnect(Account $account,
-								  string $code): Account {
-		$clientId = $this->config->getAppValue(Application::APP_ID, 'google_oauth_client_id');
-		$encryptedClientSecret = $this->config->getAppValue(Application::APP_ID, 'google_oauth_client_secret');
+	public function finishConnect(Account $account, string $provider, string $code): Account {
+		$clientId = $this->config->getAppValue(Application::APP_ID, "{$provider}_oauth_client_id");
+		$encryptedClientSecret = $this->config->getAppValue(Application::APP_ID, "{$provider}_oauth_client_secret");
 		if (empty($clientId) || empty($encryptedClientSecret)) {
 			// This is highly unexpected
 			$this->logger->critical('Can not finish Google account linking due to missing client secrets');
@@ -108,18 +107,18 @@ class GoogleIntegration {
 		$clientSecret = $this->crypto->decrypt($encryptedClientSecret);
 		$httpClient = $this->clientService->newClient();
 		try {
-			$response = $httpClient->post('https://oauth2.googleapis.com/token', [
-				'content-type' => 'application/json',
-				'body' => json_encode([
-					'client_id' => $clientId,
+			$tokenUrl = $provider === 'microsoft' ? 'https://login.microsoftonline.com/common/oauth2/v2.0/token' : 'https://oauth2.googleapis.com/token';
+			$response = $httpClient->post($tokenUrl, [
+				'body' => [
+					'client_id'     => $clientId,
 					'client_secret' => $clientSecret,
-					'grant_type' => 'authorization_code',
-					'redirect_uri' => $this->getRedirectUrl(),
-					'code' => $code,
-				], JSON_THROW_ON_ERROR)
+					'grant_type'    => 'authorization_code',
+					'redirect_uri'  => $this->getRedirectUrl($provider),
+					'code'          => $code,
+				]
 			]);
 		} catch (Exception $e) {
-			$this->logger->error('Could not link Google account: ' . $e->getMessage(), [
+			$this->logger->error('Could not link ' . $provider . ' account: ' . $e->getMessage(), [
 				'exception' => $e,
 			]);
 			return $account;
@@ -147,8 +146,10 @@ class GoogleIntegration {
 			return $account;
 		}
 
-		$clientId = $this->config->getAppValue(Application::APP_ID, 'google_oauth_client_id');
-		$encryptedClientSecret = $this->config->getAppValue(Application::APP_ID, 'google_oauth_client_secret');
+		$provider = $account->getMailAccount()->getInboundHost() === 'outlook.office365.com' ? 'microsoft' : 'google';
+		$refreshUrl = $provider === 'microsoft' ? 'https://login.microsoftonline.com/common/oauth2/v2.0/token' : 'https://oauth2.googleapis.com/token';
+		$clientId = $this->config->getAppValue(Application::APP_ID, "{$provider}_oauth_client_id");
+		$encryptedClientSecret = $this->config->getAppValue(Application::APP_ID, "{$provider}_oauth_client_secret");
 		if (empty($clientId) || empty($encryptedClientSecret)) {
 			// Nothing to do here
 			return $account;
@@ -158,14 +159,13 @@ class GoogleIntegration {
 		$clientSecret = $this->crypto->decrypt($encryptedClientSecret);
 		$httpClient = $this->clientService->newClient();
 		try {
-			$response = $httpClient->post('https://oauth2.googleapis.com/token', [
-				'content-type' => 'application/json',
-				'body' => json_encode([
-					'client_id' => $clientId,
+			$response = $httpClient->post($refreshUrl, [
+				'body'         => [
+					'client_id'     => $clientId,
 					'client_secret' => $clientSecret,
-					'grant_type' => 'refresh_token',
+					'grant_type'    => 'refresh_token',
 					'refresh_token' => $refreshToken,
-				], JSON_THROW_ON_ERROR)
+				]
 			]);
 		} catch (Exception $e) {
 			$this->logger->warning('Could not refresh oauth token: ' . $e->getMessage(), [
@@ -183,7 +183,7 @@ class GoogleIntegration {
 		return $account;
 	}
 
-	public function getRedirectUrl(): string {
-		return $this->urlGenerator->linkToRouteAbsolute('mail.googleIntegration.oauthRedirect');
+	public function getRedirectUrl($provider): string {
+		return $this->urlGenerator->linkToRouteAbsolute('mail.googleIntegration.oauthRedirect', ['provider' => $provider]);
 	}
 }
