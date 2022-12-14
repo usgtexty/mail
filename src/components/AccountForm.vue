@@ -254,6 +254,42 @@
 				{{ submitButtonText }}
 			</ButtonVue>
 		</div>
+
+		<div
+			v-if="mode === 'auto' && (googleOauthUrl || microsoftOauthUrl) && !useSso"
+			class="account-form__oauth-buttons">
+			<div class="account-form__separator">
+				{{ t('mail', 'OR') }}
+			</div>
+			<div v-if="googleOauthUrl" class="account-form__submit-buttons">
+				<ButtonVue
+					class="account-form__submit-button"
+					type="primary"
+					native-type="submit"
+					:disabled="isDisabledOAuth || loading"
+					@click.prevent="onSubmit($event, 'google')">
+					<template #icon>
+						<IconLoading v-if="loading" :size="20" />
+						<IconCheck v-else :size="20" />
+					</template>
+					{{ t('mail', 'Sign in with Google') }}
+				</ButtonVue>
+			</div>
+			<div v-if="microsoftOauthUrl && !useSso" class="account-form__submit-buttons">
+				<ButtonVue
+					class="account-form__submit-button"
+					type="primary"
+					native-type="submit"
+					:disabled="isDisabledOAuth || loading"
+					@click.prevent="onSubmit($event, 'microsoft')">
+					<template #icon>
+						<IconLoading v-if="loading" :size="20" />
+						<IconCheck v-else :size="20" />
+					</template>
+					{{ t('mail', 'Sign in with Microsoft') }}
+				</ButtonVue>
+			</div>
+		</div>
 		<div v-if="feedback" class="account-form--feedback">
 			{{ feedback }}
 		</div>
@@ -353,6 +389,18 @@ export default {
 
 			return !this.emailAddress || !this.isValidEmail(this.emailAddress)
 				|| (!this.useSso && !this.autoConfig.password)
+		},
+
+		isDisabledOAuth() {
+			if (this.loading) {
+				return true
+			}
+
+			if (this.mode !== 'auto') {
+				return this.loading
+			}
+
+			return !this.emailAddress || !this.isValidEmail(this.emailAddress)
 		},
 
 		isDisabledManual() {
@@ -487,9 +535,15 @@ export default {
 			}
 			return true
 		},
-		async detectConfig() {
+		async detectConfig(forceOauth) {
 			this.loadingMessage = t('mail', 'Looking up configuration')
-			const config = await queryIspdb(this.emailAddress)
+			let emailAddress = this.emailAddress
+			if (forceOauth === 'google') {
+				emailAddress = 'test@gmail.com'
+			} else if (forceOauth === 'microsoft') {
+				emailAddress = 'test@outlook.com'
+			}
+			const config = await queryIspdb(emailAddress)
 			logger.debug('fetched auto config', { config })
 			// Apply settings to manual mode before submitting so the user
 			// can make modifications if the config fails
@@ -538,9 +592,9 @@ export default {
 				return false
 			}
 		},
-		async onSubmit(event) {
+		async onSubmit(event, forceOauth) {
 			logger.debug('account form submitted', { event })
-			if (this.isDisabledManual || this.isDisabledAuto) {
+			if ((this.isDisabledManual || this.isDisabledAuto) && ['google', 'microsoft'].indexOf(forceOauth) === -1) {
 				logger.warn('submit is disabled')
 				return
 			}
@@ -548,7 +602,7 @@ export default {
 			this.loading = true
 			try {
 				if (this.mode === 'auto') {
-					if (!await this.detectConfig()) {
+					if (!await this.detectConfig(forceOauth)) {
 						logger.warn('Auto mode failed')
 						return
 					}
@@ -560,11 +614,11 @@ export default {
 					emailAddress: this.emailAddress,
 					imapHost: this.manualConfig.imapHost.trim(),
 					smtpHost: this.manualConfig.smtpHost.trim(),
-					authMethod: this.useSso ? 'xoauth2' : 'password',
+					authMethod: (this.useSso || ['google', 'microsoft'].indexOf(forceOauth) !== -1) ? 'xoauth2' : 'password',
 				}
 				if (!this.account) {
 					const account = await this.$store.dispatch('startAccountSetup', data)
-					if (this.useGoogleSso) {
+					if (this.useGoogleSso || forceOauth === 'google') {
 						this.loadingMessage = t('mail', 'Awaiting user consent')
 						this.feedback = t('mail', 'Account created. Please follow the popup instructions to link your Google account')
 						try {
@@ -582,7 +636,7 @@ export default {
 						this.clearFeedback()
 					}
 
-					if (this.useMicrosoftSso) {
+					if (this.useMicrosoftSso || forceOauth === 'microsoft') {
 						this.loadingMessage = t('mail', 'Awaiting user consent')
 						this.feedback = t('mail', 'Account created. Please follow the popup instructions to link your Microsoft account')
 						try {
@@ -608,7 +662,7 @@ export default {
 						...data,
 						accountId: this.account.id,
 					})
-					if (this.useGoogleSso) {
+					if (this.useGoogleSso || forceOauth === 'google') {
 						this.loadingMessage = t('mail', 'Awaiting user consent')
 						this.feedback = t('mail', 'Account updated. Please follow the popup instructions to reconnect your Google account')
 						try {
@@ -629,7 +683,7 @@ export default {
 						this.clearFeedback()
 					}
 
-					if (this.useMicrosoftSso) {
+					if (this.useMicrosoftSso || forceOauth === 'microsoft') {
 						this.loadingMessage = t('mail', 'Awaiting user consent')
 						this.feedback = t('mail', 'Account updated. Please follow the popup instructions to reconnect your Microsoft account')
 						try {
@@ -787,5 +841,14 @@ input[type='radio'][disabled] + label {
 #account-form input {
 	width: 100%;
 	box-sizing: border-box;
+}
+
+.account-form__separator {
+	line-height: 1em;
+	padding: 2px 0;
+	margin: 10px 0;
+	text-align: center;
+	border-top: 1px solid #ddd;
+	border-bottom: 1px solid #ddd;
 }
 </style>
